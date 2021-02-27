@@ -7,10 +7,12 @@
 </head>
 <body>
 <div>
-    <form method="post" action="/login">
-        <input name="j_username"/>
-        <input name="j_password"/>
-        <input type="submit"/>
+    <th:block th:each="msg : ${messages}">
+        <h2 th:text="${msg}"></h2>
+    </th:block>
+    <br><br>
+    <form th:action="@{/logout}" method="post">
+        <input type="submit" value="Logout">
     </form>
 </div>
 </body>

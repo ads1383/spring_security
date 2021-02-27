@@ -1,7 +1,9 @@
 package web.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -10,18 +12,42 @@ import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import web.config.handler.LoginSuccessHandler;
+import web.service.UserService;
+
+import javax.sql.DataSource;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
-    @Override
-    public void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.inMemoryAuthentication().withUser("ADMIN").password("ADMIN").roles("ADMIN");
+    UserService userService;
+    DataSource dataSource;
+
+    @Autowired
+    public SecurityConfig(DataSource dataSource, UserService userService) {
+        this.dataSource = dataSource;
+        this.userService = userService;
     }
+
+    @Bean
+    public DaoAuthenticationProvider daoAuthenticationProvider() {
+        DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider();
+        //authenticationProvider.setPasswordEncoder(passwordEncoder());
+        authenticationProvider.setUserDetailsService(userService);
+        return authenticationProvider;
+    }
+
+
+
+//    @Override
+//    public void configure(AuthenticationManagerBuilder auth) throws Exception {
+//        //auth.inMemoryAuthentication().withUser("admin").password("admin").roles("ADMIN");
+//        auth.jdbcAuthentication().dataSource(dataSource);
+//    }
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
+
         http.formLogin()
                 // указываем страницу с формой логина
                 .loginPage("/login")
@@ -41,7 +67,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 // указываем URL логаута
                 .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
                 // указываем URL при удачном логауте
-                .logoutSuccessUrl("/login?logout")
+//                .logoutSuccessUrl("/login?logout")
+                .logoutSuccessUrl("/")
                 //выклчаем кроссдоменную секьюрность (на этапе обучения неважна)
                 .and().csrf().disable();
 
@@ -50,12 +77,16 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .authorizeRequests()
                 //страницы аутентификаци доступна всем
                 .antMatchers("/login").anonymous()
-                // защищенные URL
-                .antMatchers("/hello").access("hasAnyRole('ADMIN')").anyRequest().authenticated();
+                .antMatchers("/").hasAnyRole("ADMIN", "USER")
+                .antMatchers("/admin").hasRole("ADMIN")
+                .antMatchers("/add").hasRole("ADMIN")
+                .antMatchers("/updateuser").hasRole("ADMIN")
+                .antMatchers("/deleteuser").hasRole("ADMIN")
+                .anyRequest().authenticated();
     }
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return NoOpPasswordEncoder.getInstance();
-    }
+//    @Bean
+//    public PasswordEncoder passwordEncoder() {
+//        return NoOpPasswordEncoder.getInstance();
+//    }
 }
